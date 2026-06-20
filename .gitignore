@@ -1,0 +1,19 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.aab
+
+# Node relay server
+relay-server/node_modules/
+
+# OS
+Thumbs.db

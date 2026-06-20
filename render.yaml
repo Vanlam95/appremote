@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: appremote-relay
+    runtime: node
+    rootDir: relay-server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
