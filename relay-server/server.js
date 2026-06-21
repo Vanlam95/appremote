@@ -54,7 +54,7 @@ const server = http.createServer((req, res) => {
     res.end('Not found');
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, maxPayload: 16 * 1024 * 1024 });
 
 wss.on('connection', (ws) => {
     ws.on('message', (raw) => {
@@ -123,6 +123,18 @@ wss.on('connection', (ws) => {
                 const room = rooms.get(ws.roomId);
                 if (ws.role !== 'host' || !room?.client) return;
                 send(room.client, { type: 'response', data: msg.data });
+                break;
+            }
+
+            case 'screen_frame': {
+                const room = rooms.get(ws.roomId);
+                if (ws.role !== 'host' || !room?.client) return;
+                send(room.client, {
+                    type: 'screen_frame',
+                    data: msg.data,
+                    width: msg.width,
+                    height: msg.height
+                });
                 break;
             }
 
