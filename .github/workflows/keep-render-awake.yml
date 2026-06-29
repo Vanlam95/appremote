@@ -1,0 +1,16 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Mỗi 5 phút — giữ Render free tier không ngủ
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -fsS "https://appremote-07ys.onrender.com/health"
+          curl -fsS "https://appremote-07ys.onrender.com/relay-config"
