@@ -16,6 +16,7 @@ import com.appremote.remotecontrol.network.RelayProtocol
 import com.appremote.remotecontrol.service.RemoteServerService
 import com.appremote.remotecontrol.util.AppPreferences
 import com.appremote.remotecontrol.util.DeviceUtils
+import com.appremote.remotecontrol.util.RelayConfig
 import com.appremote.remotecontrol.util.ScreenCaptureHolder
 
 class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListener {
@@ -48,7 +49,6 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
         binding.rbLan.isChecked = !useInternet
         updateModeUi()
 
-        binding.etRelayUrl.setText(AppPreferences.getRelayUrl(this))
         if (binding.etRoomCode.text.isNullOrBlank()) {
             binding.etRoomCode.setText(RelayProtocol.generateRoomCode())
         }
@@ -93,6 +93,7 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
     private fun updateModeUi() {
         binding.layoutInternet.visibility = if (useInternet) View.VISIBLE else View.GONE
         binding.layoutLan.visibility = if (useInternet) View.GONE else View.VISIBLE
+        (binding.etRelayUrl.parent as? View)?.visibility = View.GONE
     }
 
     private fun updateIpDisplay() {
@@ -130,19 +131,14 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
         val intent = Intent(this, RemoteServerService::class.java)
 
         if (useInternet) {
-            val relayUrl = binding.etRelayUrl.text?.toString()?.trim().orEmpty()
+            val relayUrl = RelayConfig.getRelayUrl(this)
             val roomCode = binding.etRoomCode.text?.toString()?.trim().orEmpty()
 
-            if (relayUrl.isEmpty()) {
-                Toast.makeText(this, R.string.relay_url_required, Toast.LENGTH_SHORT).show()
-                return
-            }
             if (roomCode.length != 6) {
                 Toast.makeText(this, R.string.room_code_invalid, Toast.LENGTH_SHORT).show()
                 return
             }
 
-            AppPreferences.setRelayUrl(this, relayUrl)
             intent.putExtra(RemoteServerService.EXTRA_USE_RELAY, true)
             intent.putExtra(RemoteServerService.EXTRA_RELAY_URL, relayUrl)
             intent.putExtra(RemoteServerService.EXTRA_ROOM_CODE, roomCode)
@@ -203,9 +199,10 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
 
     override fun onError(message: String) {
         runOnUiThread {
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             if (isServerRunning) {
-                stopServer()
+                Toast.makeText(this, R.string.connection_reconnecting, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
     }

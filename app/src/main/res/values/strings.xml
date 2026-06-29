@@ -110,5 +110,7 @@
     <string name="calibrate_reset">Đặt lại</string>
     <string name="calibrate_saved">Đã lưu hiệu chỉnh</string>
     <string name="tap_outside_screen">Chạm vào vùng hình ảnh</string>
+    <string name="internet_auto_hint">Chế độ Internet — kết nối server tự động, chỉ cần mã phòng.</string>
+    <string name="connection_reconnecting">Mất kết nối tạm thời, đang tự kết nối lại…</string>
     <string name="tap_send_failed">Không gửi được lệnh click</string>
 </resources>

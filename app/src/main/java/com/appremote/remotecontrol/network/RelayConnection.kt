@@ -1,5 +1,7 @@
 package com.appremote.remotecontrol.network
 
+import android.os.Handler
+import android.os.Looper
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -11,7 +13,8 @@ class RelayConnection(
     private val role: String,
     private val relayUrl: String,
     private val roomCode: String,
-    private val listener: Listener
+    private val listener: Listener,
+    private val autoReconnect: Boolean = false
 ) {
     interface Listener {
         fun onRegistered()
@@ -22,12 +25,14 @@ class RelayConnection(
         fun onScreenFrame(data: String, width: Int, height: Int) {}
         fun onError(message: String)
         fun onDisconnected()
+        fun onReconnecting(attempt: Int) {}
     }
 
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS)
-        .pingInterval(30, TimeUnit.SECONDS)
+        .pingInterval(15, TimeUnit.SECONDS)
         .build()
 
     private var webSocket: WebSocket? = null
@@ -35,16 +40,32 @@ class RelayConnection(
     @Volatile
     private var paired = false
 
+    @Volatile
+    private var intentionalDisconnect = false
+
+    @Volatile
+    private var reconnectAttempt = 0
+
     private var pendingResponseHandler: ((String) -> Unit)? = null
+    private var reconnectRunnable: Runnable? = null
 
     fun connect() {
-        disconnect()
+        intentionalDisconnect = false
+        cancelReconnect()
+        openSocket()
+    }
+
+    private fun openSocket() {
+        webSocket?.close(1000, "Reconnect")
+        webSocket = null
         paired = false
+
         val url = RelayProtocol.normalizeRelayUrl(relayUrl)
         val request = Request.Builder().url(url).build()
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                reconnectAttempt = 0
                 webSocket.send(RelayProtocol.register(role, roomCode))
             }
 
@@ -55,14 +76,33 @@ class RelayConnection(
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 paired = false
                 listener.onDisconnected()
+                scheduleReconnectIfNeeded()
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 paired = false
-                listener.onError(t.message ?: "Connection failed")
+                if (!intentionalDisconnect) {
+                    listener.onError(t.message ?: "Connection failed")
+                }
                 listener.onDisconnected()
+                scheduleReconnectIfNeeded()
             }
         })
+    }
+
+    private fun scheduleReconnectIfNeeded() {
+        if (!autoReconnect || intentionalDisconnect) return
+        cancelReconnect()
+        reconnectAttempt++
+        listener.onReconnecting(reconnectAttempt)
+        val delayMs = minOf(3_000L * reconnectAttempt, 30_000L)
+        reconnectRunnable = Runnable { openSocket() }
+        mainHandler.postDelayed(reconnectRunnable!!, delayMs)
+    }
+
+    private fun cancelReconnect() {
+        reconnectRunnable?.let { mainHandler.removeCallbacks(it) }
+        reconnectRunnable = null
     }
 
     private fun handleMessage(text: String) {
@@ -70,6 +110,7 @@ class RelayConnection(
             RelayProtocol.TYPE_REGISTERED -> listener.onRegistered()
             RelayProtocol.TYPE_PAIRED -> {
                 paired = true
+                reconnectAttempt = 0
                 listener.onPaired()
             }
             RelayProtocol.TYPE_COMMAND -> {
@@ -138,6 +179,8 @@ class RelayConnection(
     fun isPaired(): Boolean = paired
 
     fun disconnect() {
+        intentionalDisconnect = true
+        cancelReconnect()
         pendingResponseHandler = null
         webSocket?.close(1000, "Disconnect")
         webSocket = null

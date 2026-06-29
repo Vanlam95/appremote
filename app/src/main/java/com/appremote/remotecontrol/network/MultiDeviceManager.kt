@@ -16,6 +16,7 @@ class MultiDeviceManager(
 
     private data class Session(
         val index: Int,
+        var config: DeviceConfig? = null,
         var state: DeviceState = DeviceState.DISCONNECTED,
         var relay: RelayConnection? = null,
         var lan: RemoteWebSocketClient? = null
@@ -34,7 +35,7 @@ class MultiDeviceManager(
 
         if (useInternet) {
             if (config.roomCode.length != 6) return
-            val session = Session(config.index, DeviceState.CONNECTING)
+            val session = Session(config.index, config, DeviceState.CONNECTING)
             sessions[config.index] = session
             listener.onDeviceStateChanged(config.index, DeviceState.CONNECTING)
 
@@ -42,11 +43,12 @@ class MultiDeviceManager(
                 role = RelayProtocol.ROLE_CLIENT,
                 relayUrl = relayUrl,
                 roomCode = config.roomCode,
+                autoReconnect = true,
                 listener = createRelayListener(config.index, session)
             ).also { it.connect() }
         } else {
             if (config.lanIp.isBlank()) return
-            val session = Session(config.index, DeviceState.CONNECTING)
+            val session = Session(config.index, config, DeviceState.CONNECTING)
             sessions[config.index] = session
             listener.onDeviceStateChanged(config.index, DeviceState.CONNECTING)
 
@@ -78,6 +80,7 @@ class MultiDeviceManager(
         sessions[index]?.let { session ->
             session.relay?.disconnect()
             session.lan?.disconnect()
+            session.config = null
             sessions.remove(index)
             listener.onDeviceStateChanged(index, DeviceState.DISCONNECTED)
         }
@@ -188,9 +191,20 @@ class MultiDeviceManager(
             }
 
             override fun onDisconnected() {
-                session.state = DeviceState.DISCONNECTED
-                listener.onDeviceStateChanged(index, DeviceState.DISCONNECTED)
-                notifySummary()
+                if (session.config == null) {
+                    session.state = DeviceState.DISCONNECTED
+                    listener.onDeviceStateChanged(index, DeviceState.DISCONNECTED)
+                    notifySummary()
+                } else {
+                    session.state = DeviceState.CONNECTING
+                    listener.onDeviceStateChanged(index, DeviceState.CONNECTING)
+                    notifySummary()
+                }
+            }
+
+            override fun onReconnecting(attempt: Int) {
+                session.state = DeviceState.CONNECTING
+                listener.onDeviceStateChanged(index, DeviceState.CONNECTING)
             }
         }
 

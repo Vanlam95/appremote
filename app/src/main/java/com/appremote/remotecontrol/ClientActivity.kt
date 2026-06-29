@@ -19,6 +19,7 @@ import com.appremote.remotecontrol.network.MultiDeviceManager
 import com.appremote.remotecontrol.network.ShoppingSites
 import com.appremote.remotecontrol.util.AppPreferences
 import com.appremote.remotecontrol.util.DeviceControlBridge
+import com.appremote.remotecontrol.util.RelayConfig
 
 class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
 
@@ -51,7 +52,6 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
         deviceCount = AppPreferences.getDeviceCount(this)
         binding.rbInternet.isChecked = useInternet
         binding.rbLan.isChecked = !useInternet
-        binding.etRelayUrl.setText(AppPreferences.getRelayUrl(this))
 
         setupDeviceCountSpinner()
         setupDeviceSlots()
@@ -186,7 +186,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
     }
 
     private fun buildDeviceManager(): MultiDeviceManager {
-        val relayUrl = binding.etRelayUrl.text?.toString()?.trim().orEmpty()
+        val relayUrl = if (useInternet) RelayConfig.getRelayUrl(this) else ""
         val port = binding.etPort.text?.toString()?.toIntOrNull() ?: CommandProtocol.DEFAULT_PORT
         cachedRelayUrl = relayUrl
         cachedPort = port
@@ -200,7 +200,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
     }
 
     private fun ensureDeviceManager(): MultiDeviceManager {
-        val relayUrl = binding.etRelayUrl.text?.toString()?.trim().orEmpty()
+        val relayUrl = if (useInternet) RelayConfig.getRelayUrl(this) else ""
         val port = binding.etPort.text?.toString()?.toIntOrNull() ?: CommandProtocol.DEFAULT_PORT
         val needsRecreate = deviceManager == null ||
             relayUrl != cachedRelayUrl ||
@@ -215,7 +215,8 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
     }
 
     private fun updateModeUi() {
-        binding.tilRelayUrl.visibility = if (useInternet) View.VISIBLE else View.GONE
+        binding.tilRelayUrl.visibility = View.GONE
+        binding.tvInternetHint.visibility = if (useInternet) View.VISIBLE else View.GONE
         binding.tilLanPort.visibility = if (useInternet) View.GONE else View.VISIBLE
         deviceSlots.forEach { it.updateMode(useInternet) }
     }
@@ -240,14 +241,8 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
     }
 
     private fun validateConnectionSettings(): Boolean {
-        if (useInternet) {
-            val relayUrl = binding.etRelayUrl.text?.toString()?.trim().orEmpty()
-            if (relayUrl.isEmpty()) {
-                Toast.makeText(this, R.string.relay_url_required, Toast.LENGTH_SHORT).show()
-                return false
-            }
-            AppPreferences.setRelayUrl(this, relayUrl)
-        }
+        if (!useInternet) return true
+        RelayConfig.getRelayUrl(this)
         return true
     }
 

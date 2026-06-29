@@ -44,12 +44,22 @@
                 android:text="@string/mode_lan" />
         </RadioGroup>
 
+        <TextView
+            android:id="@+id/tvInternetHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/internet_auto_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilRelayUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="@string/relay_url_hint">
+            android:hint="@string/relay_url_hint"
+            android:visibility="gone">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etRelayUrl"

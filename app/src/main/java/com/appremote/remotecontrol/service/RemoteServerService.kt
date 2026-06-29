@@ -31,6 +31,7 @@ class RemoteServerService : Service() {
     private var webSocketServer: RemoteWebSocketServer? = null
     private var relayConnection: RelayConnection? = null
     private var usingRelay = true
+    private var savedRoomCode = ""
 
     interface ConnectionListener {
         fun onRegistered(roomCode: String)
@@ -62,9 +63,10 @@ class RemoteServerService : Service() {
     }
 
     private fun startRelay(relayUrl: String, roomCode: String) {
+        savedRoomCode = roomCode
         if (relayConnection != null) return
         if (relayUrl.isBlank() || roomCode.length != 6) {
-            connectionListener?.onError("Relay URL hoặc mã phòng không hợp lệ")
+            connectionListener?.onError("Mã phòng không hợp lệ")
             stopSelf()
             return
         }
@@ -79,6 +81,7 @@ class RemoteServerService : Service() {
             role = RelayProtocol.ROLE_HOST,
             relayUrl = relayUrl,
             roomCode = roomCode,
+            autoReconnect = true,
             listener = object : RelayConnection.Listener {
                 override fun onRegistered() {
                     connectionListener?.onRegistered(roomCode)
@@ -103,6 +106,10 @@ class RemoteServerService : Service() {
                 }
 
                 override fun onDisconnected() {
+                    connectionListener?.onClientDisconnected()
+                }
+
+                override fun onReconnecting(attempt: Int) {
                     connectionListener?.onClientDisconnected()
                 }
             }

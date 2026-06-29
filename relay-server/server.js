@@ -41,6 +41,13 @@ function isValidRoom(room) {
 }
 
 const server = http.createServer((req, res) => {
+    if (req.url === '/relay-config') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            relay: process.env.RELAY_WSS_URL || 'wss://appremote-07ys.onrender.com'
+        }));
+        return;
+    }
     if (req.url === '/' || req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -56,7 +63,21 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server, maxPayload: 16 * 1024 * 1024 });
 
+const PING_INTERVAL_MS = 25_000;
+
+setInterval(() => {
+    wss.clients.forEach((client) => {
+        if (client.isAlive === false) {
+            return client.terminate();
+        }
+        client.isAlive = false;
+        client.ping();
+    });
+}, PING_INTERVAL_MS);
+
 wss.on('connection', (ws) => {
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
     ws.on('message', (raw) => {
         let msg;
         try {
