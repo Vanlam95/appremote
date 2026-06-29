@@ -3,6 +3,8 @@ package com.appremote.remotecontrol.service
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Handler
+import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import com.appremote.remotecontrol.network.CommandProtocol
 import com.appremote.remotecontrol.network.RemoteCommand
@@ -10,10 +12,14 @@ import com.appremote.remotecontrol.util.DeviceUtils
 
 class RemoteAccessibilityService : AccessibilityService() {
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     companion object {
         @Volatile
         var instance: RemoteAccessibilityService? = null
             private set
+
+        private const val TAP_DURATION_MS = 100L
     }
 
     override fun onServiceConnected() {
@@ -34,12 +40,19 @@ class RemoteAccessibilityService : AccessibilityService() {
         val command = CommandProtocol.parseCommand(json) ?: return false
         return when (command) {
             is RemoteCommand.OpenBrowser -> {
-                DeviceUtils.openBrowser(this, command.url)
+                mainHandler.post { DeviceUtils.openBrowser(this, command.url) }
                 true
             }
             is RemoteCommand.GlobalAction -> performGlobalAction(command.action)
-            is RemoteCommand.Scroll -> performScroll(command.direction)
-            is RemoteCommand.Tap -> performTap(command.x, command.y)
+            is RemoteCommand.Scroll -> {
+                mainHandler.post { performScroll(command.direction) }
+                true
+            }
+            is RemoteCommand.Tap -> {
+                mainHandler.post { performTap(command.x, command.y) }
+                true
+            }
+            is RemoteCommand.ScreenStart, is RemoteCommand.ScreenStop -> false
         }
     }
 
@@ -75,11 +88,14 @@ class RemoteAccessibilityService : AccessibilityService() {
     }
 
     private fun performTap(x: Float, y: Float): Boolean {
-        val path = Path().apply { moveTo(x, y) }
+        val path = Path().apply {
+            moveTo(x, y)
+            lineTo(x + 1f, y + 1f)
+        }
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
+            .addStroke(GestureDescription.StrokeDescription(path, 0, TAP_DURATION_MS))
             .build()
-        return dispatchGesture(gesture, null, null)
+        return dispatchGesture(gesture, null, mainHandler)
     }
 
     private fun dispatchSwipe(x1: Float, y1: Float, x2: Float, y2: Float): Boolean {
@@ -90,6 +106,6 @@ class RemoteAccessibilityService : AccessibilityService() {
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
             .build()
-        return dispatchGesture(gesture, null, null)
+        return dispatchGesture(gesture, null, mainHandler)
     }
 }

@@ -94,4 +94,21 @@
     <string name="no_device_selected">Chọn ít nhất 1 máy (tick checkbox)</string>
     <string name="command_sent_one">Đã gửi tới %1$s</string>
     <string name="device_not_connected">Máy chưa kết nối</string>
+    <string name="view_screen">Xem màn hình</string>
+    <string name="remote_screen">Màn hình từ xa</string>
+    <string name="screen_touch_hint">Chạm vào màn hình để click trên máy bị điều khiển</string>
+    <string name="screen_start_failed">Không bật được chia sẻ màn hình</string>
+    <string name="screen_permission_denied">Cần cho phép ghi màn hình để máy điều khiển xem được</string>
+    <string name="screen_permission_required">Máy bị điều khiển chưa cho phép ghi màn hình. Hãy dừng và bật lại server, chọn Cho phép khi được hỏi.</string>
+    <string name="screen_no_frames">Không nhận được hình ảnh. Kiểm tra máy bị điều khiển đã cấp quyền ghi màn hình và relay server đã được cập nhật.</string>
+    <string name="calibrate_click">Hiệu chỉnh click</string>
+    <string name="calibrate_hide">Ẩn hiệu chỉnh</string>
+    <string name="calibrate_hint">Chạm thử trên màn hình, nếu lệch thì chỉnh bên dưới. Mỗi máy lưu riêng.</string>
+    <string name="calibrate_offset_x">Lệch ngang</string>
+    <string name="calibrate_offset_y">Lệch dọc</string>
+    <string name="calibrate_scale">Tỷ lệ</string>
+    <string name="calibrate_reset">Đặt lại</string>
+    <string name="calibrate_saved">Đã lưu hiệu chỉnh</string>
+    <string name="tap_outside_screen">Chạm vào vùng hình ảnh</string>
+    <string name="tap_send_failed">Không gửi được lệnh click</string>
 </resources>

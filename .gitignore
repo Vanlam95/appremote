@@ -5,6 +5,7 @@
 /.idea/
 .DS_Store
 /build/
+app/build/
 /captures
 .externalNativeBuild/
 .cxx/
@@ -15,5 +16,11 @@
 # Node relay server
 relay-server/node_modules/
 
-# OS
-Thumbs.db
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Keystore — never commit
+*.jks
+*.keystore
+keystore.properties

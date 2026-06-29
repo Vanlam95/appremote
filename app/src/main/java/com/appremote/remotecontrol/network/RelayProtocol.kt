@@ -10,6 +10,7 @@ object RelayProtocol {
     const val TYPE_RESPONSE = "response"
     const val TYPE_PEER_DISCONNECTED = "peer_disconnected"
     const val TYPE_ERROR = "error"
+    const val TYPE_SCREEN_FRAME = "screen_frame"
 
     const val ROLE_HOST = "host"
     const val ROLE_CLIENT = "client"
@@ -32,6 +33,20 @@ object RelayProtocol {
             put("type", TYPE_RESPONSE)
             put("data", data)
         }.toString()
+
+    fun screenFrame(data: String, width: Int, height: Int): String =
+        JSONObject().apply {
+            put("type", TYPE_SCREEN_FRAME)
+            put("data", data)
+            put("width", width)
+            put("height", height)
+        }.toString()
+
+    fun parseWidth(json: String): Int? =
+        runCatching { JSONObject(json).getInt("width") }.getOrNull()
+
+    fun parseHeight(json: String): Int? =
+        runCatching { JSONObject(json).getInt("height") }.getOrNull()
 
     fun parseType(json: String): String? =
         runCatching { JSONObject(json).getString("type") }.getOrNull()

@@ -6,14 +6,21 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.media.projection.MediaProjection
 import androidx.core.app.NotificationCompat
 import com.appremote.remotecontrol.MainActivity
 import com.appremote.remotecontrol.R
 import com.appremote.remotecontrol.network.CommandProtocol
 import com.appremote.remotecontrol.network.RelayConnection
 import com.appremote.remotecontrol.network.RelayProtocol
+import com.appremote.remotecontrol.network.RemoteCommand
+import com.appremote.remotecontrol.service.ScreenCaptureManager
+import com.appremote.remotecontrol.util.ScreenCaptureHolder
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
@@ -63,7 +70,7 @@ class RemoteServerService : Service() {
         }
 
         createNotificationChannel()
-        startForeground(
+        startAsForeground(
             NOTIFICATION_ID,
             buildNotification(getString(R.string.server_running) + " • $roomCode")
         )
@@ -86,8 +93,7 @@ class RemoteServerService : Service() {
                 }
 
                 override fun onCommandReceived(command: String): String {
-                    val service = RemoteAccessibilityService.instance
-                    return if (service != null && service.executeCommand(command)) "OK" else "ERROR"
+                    return handleCommand(command)
                 }
 
                 override fun onCommandResponse(response: String) {}
@@ -107,7 +113,10 @@ class RemoteServerService : Service() {
         if (webSocketServer != null) return
 
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.server_running)))
+        startAsForeground(
+            NOTIFICATION_ID,
+            buildNotification(getString(R.string.server_running))
+        )
 
         webSocketServer = RemoteWebSocketServer(
             InetSocketAddress(CommandProtocol.DEFAULT_PORT)
@@ -115,6 +124,7 @@ class RemoteServerService : Service() {
     }
 
     private fun stopServer() {
+        ScreenCaptureManager.stop()
         relayConnection?.disconnect()
         relayConnection = null
         webSocketServer?.stopSafely()
@@ -135,6 +145,34 @@ class RemoteServerService : Service() {
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+    }
+
+    private fun startAsForeground(notificationId: Int, notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                notificationId,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            )
+        } else {
+            startForeground(notificationId, notification)
+        }
+    }
+
+    private fun ensureMediaProjection(): MediaProjection? {
+        ScreenCaptureHolder.getProjection()?.let { return it }
+        if (!ScreenCaptureHolder.hasPermission()) return null
+
+        val projection = ScreenCaptureHolder.createProjection(this) ?: return null
+        projection.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                ScreenCaptureManager.stop()
+                ScreenCaptureHolder.release()
+            }
+        }, Handler(Looper.getMainLooper()))
+        ScreenCaptureHolder.attachProjection(projection)
+        return projection
     }
 
     private fun buildNotification(text: String): Notification {
@@ -160,18 +198,14 @@ class RemoteServerService : Service() {
         }
 
         override fun onMessage(conn: WebSocket, message: String) {
-            val service = RemoteAccessibilityService.instance
-            val success = service?.executeCommand(message) == true
-            conn.send(if (success) "OK" else "ERROR")
+            conn.send(handleCommand(message))
         }
 
         override fun onError(conn: WebSocket?, ex: Exception) {
             ex.printStackTrace()
         }
 
-        override fun onStart() {
-            connectionPolicy = ConnectionPolicy.DISABLED
-        }
+        override fun onStart() {}
 
         fun stopSafely() {
             try { stop(1000) } catch (_: Exception) {}
@@ -189,5 +223,25 @@ class RemoteServerService : Service() {
 
         @Volatile
         var connectionListener: ConnectionListener? = null
+    }
+
+    private fun handleCommand(command: String): String {
+        when (CommandProtocol.parseCommand(command)) {
+            is RemoteCommand.ScreenStart -> {
+                val projection = ensureMediaProjection() ?: return "ERROR"
+                val started = ScreenCaptureManager.start(applicationContext, projection) { base64, width, height ->
+                    relayConnection?.sendScreenFrame(base64, width, height)
+                }
+                return if (started) "OK" else "ERROR"
+            }
+            is RemoteCommand.ScreenStop -> {
+                ScreenCaptureManager.stop()
+                return "OK"
+            }
+            else -> {
+                val service = RemoteAccessibilityService.instance
+                return if (service != null && service.executeCommand(command)) "OK" else "ERROR"
+            }
+        }
     }
 }

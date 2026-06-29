@@ -22,6 +22,12 @@ class MultiDeviceManager(
     )
 
     private val sessions = mutableMapOf<Int, Session>()
+    private val screenFrameListeners = mutableMapOf<Int, (String, Int, Int) -> Unit>()
+
+    fun setScreenFrameListener(index: Int, listener: ((String, Int, Int) -> Unit)?) {
+        if (listener == null) screenFrameListeners.remove(index)
+        else screenFrameListeners[index] = listener
+    }
 
     fun connectDevice(config: DeviceConfig) {
         disconnectDevice(config.index)
@@ -123,6 +129,18 @@ class MultiDeviceManager(
         sendToSession(session, command, callback)
     }
 
+    fun sendToDeviceAwaitingResponse(index: Int, command: String, callback: (String?) -> Unit) {
+        val session = sessions[index] ?: run {
+            callback(null)
+            return
+        }
+        if (session.state != DeviceState.PAIRED) {
+            callback(null)
+            return
+        }
+        session.relay?.sendCommandAwaitingResponse(command, callback) ?: callback(null)
+    }
+
     fun getPairedCount(): Int =
         sessions.values.count { it.state == DeviceState.PAIRED }
 
@@ -158,6 +176,10 @@ class MultiDeviceManager(
             override fun onCommandReceived(command: String) = "ERROR"
 
             override fun onCommandResponse(response: String) {}
+
+            override fun onScreenFrame(data: String, width: Int, height: Int) {
+                screenFrameListeners[index]?.invoke(data, width, height)
+            }
 
             override fun onError(message: String) {
                 session.state = DeviceState.ERROR

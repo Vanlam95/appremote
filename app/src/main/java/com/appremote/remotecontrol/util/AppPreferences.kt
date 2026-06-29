@@ -59,4 +59,25 @@ object AppPreferences {
     fun setDeviceCount(context: Context, count: Int) {
         prefs(context).edit().putInt("device_count", count.coerceIn(1, MAX_DEVICES)).apply()
     }
+
+    fun getTapCalibration(context: Context, deviceIndex: Int): TapCalibration {
+        val p = prefs(context)
+        return TapCalibration(
+            offsetX = p.getFloat("device_${deviceIndex}_tap_offset_x", 0f),
+            offsetY = p.getFloat("device_${deviceIndex}_tap_offset_y", 0f),
+            scale = p.getFloat("device_${deviceIndex}_tap_scale", 1f)
+        )
+    }
+
+    fun setTapCalibration(context: Context, deviceIndex: Int, calibration: TapCalibration) {
+        prefs(context).edit()
+            .putFloat("device_${deviceIndex}_tap_offset_x", calibration.offsetX)
+            .putFloat("device_${deviceIndex}_tap_offset_y", calibration.offsetY)
+            .putFloat("device_${deviceIndex}_tap_scale", calibration.scale)
+            .apply()
+    }
+
+    fun resetTapCalibration(context: Context, deviceIndex: Int) {
+        setTapCalibration(context, deviceIndex, TapCalibration())
+    }
 }

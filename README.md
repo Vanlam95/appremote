@@ -34,16 +34,26 @@ URL ví dụ trong app:
 - Render: `wss://appremote-relay-xxxx.onrender.com`
 - Local WiFi: `ws://192.168.1.100:8765`
 
-## Bước 2: Build APK
+## Bước 2: Build APK Release (obfuscate)
+
+**Không dùng debug APK cho production.** Xem [docs/SECURITY.md](docs/SECURITY.md).
+
+### Release (obfuscate R8 — khuyến dùng)
+
+Android Studio → **Build → Generate Signed App Bundle or APK** → APK → tạo keystore → **release**.
+
+### Debug (test nhanh, không obfuscate)
 
 ```bash
-cd appremote
 gradlew assembleDebug
 ```
 
-Hoặc mở project trong Android Studio → **Build APK**.
+APK debug: `app/build/outputs/apk/debug/app-debug.apk`
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+## GitHub Private
+
+Repo nên để **Private**: GitHub → Settings → Danger Zone → Make private.  
+Chi tiết: [docs/SECURITY.md](docs/SECURITY.md)
 
 ## Bước 3: Sử dụng qua Internet
 

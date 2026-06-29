@@ -19,6 +19,7 @@ class RelayConnection(
         fun onPeerDisconnected()
         fun onCommandReceived(command: String): String
         fun onCommandResponse(response: String)
+        fun onScreenFrame(data: String, width: Int, height: Int) {}
         fun onError(message: String)
         fun onDisconnected()
     }
@@ -33,6 +34,8 @@ class RelayConnection(
 
     @Volatile
     private var paired = false
+
+    private var pendingResponseHandler: ((String) -> Unit)? = null
 
     fun connect() {
         disconnect()
@@ -77,7 +80,14 @@ class RelayConnection(
             }
             RelayProtocol.TYPE_RESPONSE -> {
                 if (role != RelayProtocol.ROLE_CLIENT) return
-                RelayProtocol.parseData(text)?.let { listener.onCommandResponse(it) }
+                val data = RelayProtocol.parseData(text) ?: return
+                val pending = pendingResponseHandler
+                if (pending != null) {
+                    pendingResponseHandler = null
+                    pending.invoke(data)
+                } else {
+                    listener.onCommandResponse(data)
+                }
             }
             RelayProtocol.TYPE_PEER_DISCONNECTED -> {
                 paired = false
@@ -87,7 +97,19 @@ class RelayConnection(
                 val message = RelayProtocol.parseError(text) ?: "Relay error"
                 listener.onError(message)
             }
+            RelayProtocol.TYPE_SCREEN_FRAME -> {
+                if (role != RelayProtocol.ROLE_CLIENT) return
+                val data = RelayProtocol.parseData(text) ?: return
+                val width = RelayProtocol.parseWidth(text) ?: return
+                val height = RelayProtocol.parseHeight(text) ?: return
+                listener.onScreenFrame(data, width, height)
+            }
         }
+    }
+
+    fun sendScreenFrame(data: String, width: Int, height: Int): Boolean {
+        val ws = webSocket ?: return false
+        return ws.send(RelayProtocol.screenFrame(data, width, height))
     }
 
     fun sendCommand(command: String, callback: ((Boolean) -> Unit)? = null) {
@@ -100,9 +122,23 @@ class RelayConnection(
         callback?.invoke(sent)
     }
 
+    fun sendCommandAwaitingResponse(command: String, callback: (String?) -> Unit) {
+        val ws = webSocket
+        if (ws == null || !paired) {
+            callback(null)
+            return
+        }
+        pendingResponseHandler = callback
+        if (!ws.send(RelayProtocol.command(command))) {
+            pendingResponseHandler = null
+            callback(null)
+        }
+    }
+
     fun isPaired(): Boolean = paired
 
     fun disconnect() {
+        pendingResponseHandler = null
         webSocket?.close(1000, "Disconnect")
         webSocket = null
         paired = false

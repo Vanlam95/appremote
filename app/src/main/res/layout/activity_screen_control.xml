@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <ImageView
+        android:id="@+id/ivRemoteScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/remote_screen"
+        android:scaleType="fitCenter" />
+
+    <View
+        android:id="@+id/vTapMarker"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/tap_marker"
+        android:elevation="10dp"
+        android:visibility="gone" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnToggleCalibrate"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:text="@string/calibrate_click"
+        android:textSize="12sp" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/panelCalibrate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="8dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#E6000000"
+        app:cardCornerRadius="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/calibrate_hint"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/calibrate_offset_x"
+                    android:textColor="#CCCCCC"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOffsetXMinus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="48dp"
+                    android:layout_height="40dp"
+                    android:padding="0dp"
+                    android:text="←"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvOffsetX"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOffsetXPlus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="48dp"
+                    android:layout_height="40dp"
+                    android:padding="0dp"
+                    android:text="→"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/calibrate_offset_y"
+                    android:textColor="#CCCCCC"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOffsetYMinus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="48dp"
+                    android:layout_height="40dp"
+                    android:padding="0dp"
+                    android:text="↑"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvOffsetY"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOffsetYPlus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="48dp"
+                    android:layout_height="40dp"
+                    android:padding="0dp"
+                    android:text="↓"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResetCalibration"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="@string/calibrate_reset"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tvScreenHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#99000000"
+        android:clickable="false"
+        android:focusable="false"
+        android:padding="12dp"
+        android:text="@string/screen_touch_hint"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp" />
+
+    <ProgressBar
+        android:id="@+id/progressScreen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center" />
+
+</FrameLayout>

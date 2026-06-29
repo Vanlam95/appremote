@@ -9,6 +9,8 @@ object CommandProtocol {
     const val CMD_GLOBAL_ACTION = "GLOBAL_ACTION"
     const val CMD_SCROLL = "SCROLL"
     const val CMD_TAP = "TAP"
+    const val CMD_SCREEN_START = "SCREEN_START"
+    const val CMD_SCREEN_STOP = "SCREEN_STOP"
 
     const val ACTION_HOME = "HOME"
     const val ACTION_BACK = "BACK"
@@ -42,6 +44,12 @@ object CommandProtocol {
             put("y", y.toDouble())
         }.toString()
 
+    fun screenStart(): String =
+        JSONObject().apply { put("cmd", CMD_SCREEN_START) }.toString()
+
+    fun screenStop(): String =
+        JSONObject().apply { put("cmd", CMD_SCREEN_STOP) }.toString()
+
     fun parseCommand(json: String): RemoteCommand? {
         return try {
             val obj = JSONObject(json)
@@ -53,6 +61,8 @@ object CommandProtocol {
                     obj.getDouble("x").toFloat(),
                     obj.getDouble("y").toFloat()
                 )
+                CMD_SCREEN_START -> RemoteCommand.ScreenStart
+                CMD_SCREEN_STOP -> RemoteCommand.ScreenStop
                 else -> null
             }
         } catch (_: Exception) {
@@ -66,6 +76,8 @@ sealed class RemoteCommand {
     data class GlobalAction(val action: String) : RemoteCommand()
     data class Scroll(val direction: String) : RemoteCommand()
     data class Tap(val x: Float, val y: Float) : RemoteCommand()
+    data object ScreenStart : RemoteCommand()
+    data object ScreenStop : RemoteCommand()
 }
 
 object ShoppingSites {

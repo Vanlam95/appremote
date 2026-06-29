@@ -1,10 +1,14 @@
 package com.appremote.remotecontrol
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.view.View
 import android.widget.RadioGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.appremote.remotecontrol.databinding.ActivityServerBinding
@@ -12,12 +16,24 @@ import com.appremote.remotecontrol.network.RelayProtocol
 import com.appremote.remotecontrol.service.RemoteServerService
 import com.appremote.remotecontrol.util.AppPreferences
 import com.appremote.remotecontrol.util.DeviceUtils
+import com.appremote.remotecontrol.util.ScreenCaptureHolder
 
 class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListener {
 
     private lateinit var binding: ActivityServerBinding
     private var isServerRunning = false
     private var useInternet = true
+
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            ScreenCaptureHolder.setPermissionResult(result.resultCode, result.data!!)
+            launchServerService()
+        } else {
+            Toast.makeText(this, R.string.screen_permission_denied, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,6 +117,16 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
             return
         }
 
+        if (!ScreenCaptureHolder.hasPermission()) {
+            val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            mediaProjectionLauncher.launch(mgr.createScreenCaptureIntent())
+            return
+        }
+
+        launchServerService()
+    }
+
+    private fun launchServerService() {
         val intent = Intent(this, RemoteServerService::class.java)
 
         if (useInternet) {
@@ -142,6 +168,7 @@ class ServerActivity : AppCompatActivity(), RemoteServerService.ConnectionListen
             action = RemoteServerService.ACTION_STOP
         }
         startService(intent)
+        ScreenCaptureHolder.release()
         isServerRunning = false
         binding.btnStartStop.text = getString(R.string.start_server)
         binding.tvStatus.text = getString(R.string.server_stopped)

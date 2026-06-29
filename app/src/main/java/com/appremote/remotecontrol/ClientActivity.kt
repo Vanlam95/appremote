@@ -1,5 +1,6 @@
 package com.appremote.remotecontrol
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,6 +18,7 @@ import com.appremote.remotecontrol.network.CommandProtocol
 import com.appremote.remotecontrol.network.MultiDeviceManager
 import com.appremote.remotecontrol.network.ShoppingSites
 import com.appremote.remotecontrol.util.AppPreferences
+import com.appremote.remotecontrol.util.DeviceControlBridge
 
 class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
 
@@ -33,6 +35,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
         override fun onConnectOne(index: Int) = connectSingle(index)
         override fun onDisconnectOne(index: Int) = disconnectSingle(index)
         override fun onCommandOne(index: Int, command: String) = sendCommandToDevice(index, command)
+        override fun onViewScreen(index: Int) = openScreenControl(index)
         override fun onSelectionChanged() = updateSummary()
     }
 
@@ -109,6 +112,11 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
         setBatchControlsEnabled(false)
     }
 
+    override fun onResume() {
+        super.onResume()
+        DeviceControlBridge.deviceManager = deviceManager
+    }
+
     override fun onPause() {
         saveDeviceConfigs()
         AppPreferences.setDeviceCount(this, deviceCount)
@@ -116,6 +124,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
     }
 
     override fun onDestroy() {
+        DeviceControlBridge.deviceManager = null
         deviceManager?.disconnectAll()
         super.onDestroy()
     }
@@ -346,6 +355,19 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
         }
     }
 
+    private fun openScreenControl(index: Int) {
+        if (deviceManager?.isPaired(index) != true) {
+            Toast.makeText(this, R.string.device_not_connected, Toast.LENGTH_SHORT).show()
+            return
+        }
+        DeviceControlBridge.deviceManager = ensureDeviceManager()
+        val name = deviceSlots.getOrNull(index)?.getDisplayName() ?: "Máy ${index + 1}"
+        startActivity(Intent(this, ScreenControlActivity::class.java).apply {
+            putExtra(ScreenControlActivity.EXTRA_DEVICE_INDEX, index)
+            putExtra(ScreenControlActivity.EXTRA_DEVICE_NAME, name)
+        })
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
@@ -355,6 +377,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
         fun onConnectOne(index: Int)
         fun onDisconnectOne(index: Int)
         fun onCommandOne(index: Int, command: String)
+        fun onViewScreen(index: Int)
         fun onSelectionChanged()
     }
 
@@ -391,6 +414,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
             binding.btnScrollUpOne.setOnClickListener {
                 callbacks.onCommandOne(index, CommandProtocol.scroll(CommandProtocol.SCROLL_UP))
             }
+            binding.btnViewScreen.setOnClickListener { callbacks.onViewScreen(index) }
         }
 
         fun bind(config: DeviceConfig) {
@@ -422,6 +446,7 @@ class ClientActivity : AppCompatActivity(), MultiDeviceManager.Listener {
 
         fun setSingleControlsEnabled(enabled: Boolean) {
             listOf(
+                binding.btnViewScreen,
                 binding.btnShopeeOne, binding.btnLazadaOne, binding.btnBackOne,
                 binding.btnHomeOne, binding.btnScrollDownOne, binding.btnScrollUpOne
             ).forEach { it.isEnabled = enabled }
